@@ -52,4 +52,18 @@ public class UserService {
 
         return user;
     }
+
+    public boolean checkEmailExists(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    public void updatePassword(String email, String newPassword) {
+        if (newPassword.length() < 8) {
+            throw new RuntimeException("Password must be at least 8 characters long");
+        }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setPassword(newPassword);
+        userRepository.save(user);
+    }
 }

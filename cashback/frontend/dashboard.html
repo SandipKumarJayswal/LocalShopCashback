@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - LocalShop Cashback</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav><a href="register.html">Register</a><a href="login.html">Login</a><a href="dashboard.html">Dashboard</a></nav>
+<div class="container">
+    <h1 id="welcomeMsg">Your Wallet</h1>
+
+    <div class="balance-card">
+        <div>Cashback Balance</div>
+        <div class="amount">₹<span id="balance">0</span></div>
+    </div>
+
+    <h1 style="font-size:16px;">Add a Purchase</h1>
+    <form id="txnForm">
+        <label>Shop ID (create one first via Postman)</label>
+        <input type="number" id="shopId" required>
+
+        <label>Purchase Amount (₹)</label>
+        <input type="number" id="amount" required>
+
+        <button type="submit">Add Transaction</button>
+    </form>
+    <div id="msg"></div>
+
+    <h1 style="font-size:16px; margin-top:25px;">Transaction History</h1>
+    <table>
+        <thead><tr><th>Amount</th><th>Cashback</th><th>Date</th></tr></thead>
+        <tbody id="txnTable"></tbody>
+    </table>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:8080/api";
+    const userId = localStorage.getItem('userId');
+    const userName = localStorage.getItem('userName');
+
+    if (!userId) {
+        alert('Please login first');
+        window.location.href = 'login.html';
+    }
+
+    document.getElementById('welcomeMsg').innerText = `Welcome, ${userName}`;
+
+    async function loadWallet() {
+        const res = await fetch(`${API_BASE}/wallet/${userId}`);
+        const data = await res.json();
+        document.getElementById('balance').innerText = data.balance.toFixed(2);
+    }
+
+    async function loadTransactions() {
+        const res = await fetch(`${API_BASE}/transactions/${userId}`);
+        const data = await res.json();
+        const tbody = document.getElementById('txnTable');
+        tbody.innerHTML = '';
+        data.forEach(t => {
+            tbody.innerHTML += `<tr><td>₹${t.amount}</td><td>₹${t.cashbackEarned.toFixed(2)}</td><td>${new Date(t.date).toLocaleDateString()}</td></tr>`;
+        });
+    }
+
+    document.getElementById('txnForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            userId: parseInt(userId),
+            shopId: parseInt(document.getElementById('shopId').value),
+            amount: parseFloat(document.getElementById('amount').value)
+        };
+
+        const res = await fetch(`${API_BASE}/transactions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+            document.getElementById('msg').innerHTML =
+                `<div class="msg success">Added! You earned ₹${data.cashbackEarned.toFixed(2)} cashback.</div>`;
+            loadWallet();
+            loadTransactions();
+        } else {
+            document.getElementById('msg').innerHTML = `<div class="msg error">${data}</div>`;
+        }
+    });
+
+    loadWallet();
+    loadTransactions();
+</script>
+</body>
+</html>
