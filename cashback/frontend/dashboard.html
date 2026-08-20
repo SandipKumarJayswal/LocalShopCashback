@@ -7,33 +7,59 @@
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-<nav><a href="register.html">Register</a><a href="login.html">Login</a><a href="dashboard.html">Dashboard</a></nav>
-<div class="container">
-    <h1 id="welcomeMsg">Your Wallet</h1>
+<body style="padding:0;">
 
-    <div class="balance-card">
-        <div>Cashback Balance</div>
-        <div class="amount">₹<span id="balance">0</span></div>
+<div class="topbar">
+    <div class="brand">LocalShop Cashback</div>
+    <nav>
+        <a href="register.html">Register</a>
+        <a href="login.html">Login</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="seller-products.html">My Products</a>
+        <a href="products.html">Browse Products</a>
+    </nav>
+</div>
+
+<div class="dashboard-wrap">
+    <h1 id="welcomeMsg" style="margin-bottom:24px;">Your Wallet</h1>
+
+    <div class="dashboard-grid">
+
+        <!-- LEFT COLUMN -->
+        <div>
+            <div class="balance-card">
+                <div>Cashback Balance</div>
+                <div class="amount">₹<span id="balance">0</span></div>
+            </div>
+
+            <div class="panel" style="margin-top:24px;">
+                <h1 style="font-size:16px; margin-bottom:0;">Add a Purchase</h1>
+                <form id="txnForm">
+                    <label>Shop ID (create one first via Postman)</label>
+                    <input type="number" id="shopId" required>
+
+                    <label>Product (optional)</label>
+                    <select id="productId"><option value="">-- Select Product --</option></select>
+
+                    <label>Purchase Amount (₹)</label>
+                    <input type="number" id="amount" required>
+
+                    <button type="submit">Add Transaction</button>
+                </form>
+                <div id="msg"></div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="panel">
+            <h1 style="font-size:16px; margin-bottom:0;">Transaction History</h1>
+            <table>
+                <thead><tr><th>Amount</th><th>Cashback</th><th>Date</th></tr></thead>
+                <tbody id="txnTable"></tbody>
+            </table>
+        </div>
+
     </div>
-
-    <h1 style="font-size:16px;">Add a Purchase</h1>
-    <form id="txnForm">
-        <label>Shop ID (create one first via Postman)</label>
-        <input type="number" id="shopId" required>
-
-        <label>Purchase Amount (₹)</label>
-        <input type="number" id="amount" required>
-
-        <button type="submit">Add Transaction</button>
-    </form>
-    <div id="msg"></div>
-
-    <h1 style="font-size:16px; margin-top:25px;">Transaction History</h1>
-    <table>
-        <thead><tr><th>Amount</th><th>Cashback</th><th>Date</th></tr></thead>
-        <tbody id="txnTable"></tbody>
-    </table>
 </div>
 
 <script>
@@ -64,11 +90,21 @@
         });
     }
 
+    async function loadProductOptions() {
+        const res = await fetch(`${API_BASE}/products`);
+        const products = await res.json();
+        const select = document.getElementById('productId');
+        products.forEach(p => {
+            select.innerHTML += `<option value="${p.id}">${p.name} (₹${p.price})</option>`;
+        });
+    }
+
     document.getElementById('txnForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const payload = {
             userId: parseInt(userId),
             shopId: parseInt(document.getElementById('shopId').value),
+            productId: document.getElementById('productId').value ? parseInt(document.getElementById('productId').value) : null,
             amount: parseFloat(document.getElementById('amount').value)
         };
 
@@ -91,6 +127,7 @@
 
     loadWallet();
     loadTransactions();
+    loadProductOptions();
 </script>
 </body>
 </html>

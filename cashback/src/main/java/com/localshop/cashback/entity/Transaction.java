@@ -21,6 +21,10 @@ public class Transaction {
     @JoinColumn(name = "shop_id", nullable = false)
     private Shop shop;
 
+    @ManyToOne
+    @JoinColumn(name = "product_id", nullable = true)
+    private Product product;
+
     @Column(nullable = false)
     private Double amount;
 

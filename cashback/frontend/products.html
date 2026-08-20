@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Browse Products - LocalShop Cashback</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body style="padding:0;">
+
+<div class="topbar">
+    <div class="brand">LocalShop Cashback</div>
+    <nav>
+        <a href="register.html">Register</a>
+        <a href="login.html">Login</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="seller-products.html">My Products</a>
+        <a href="products.html">Browse Products</a>
+    </nav>
+</div>
+
+<div class="dashboard-wrap">
+    <h1 style="margin-bottom:24px;">Browse Products</h1>
+    <div id="msg"></div>
+
+    <div id="productGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:20px; margin-top:16px;"></div>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:8080/api";
+    const userId = localStorage.getItem('userId');
+
+    if (!userId) {
+        alert('Please login first');
+        window.location.href = 'login.html';
+    }
+
+    async function loadProducts() {
+        const res = await fetch(`${API_BASE}/products`);
+        const products = await res.json();
+        const grid = document.getElementById('productGrid');
+        grid.innerHTML = '';
+
+        products.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'panel';
+            card.style.padding = '16px';
+
+            card.innerHTML = `
+                ${p.imageUrl
+                    ? `<img src="http://localhost:8080${p.imageUrl}" style="width:100%;height:150px;object-fit:cover;border-radius:12px;">`
+                    : `<div style="width:100%;height:150px;background:#0f0d26;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#555;">No Image</div>`
+                }
+                <div style="font-weight:700; color:#fff; margin-top:12px;">${p.name}</div>
+                <div style="font-size:12px; color:#a5a3d6; margin-top:4px;">${p.description || ''}</div>
+                <div style="font-size:18px; font-weight:800; color:#fbbf24; margin-top:8px;">₹${p.price}</div>
+                <div style="font-size:11px; color:#8b89b8; margin-top:4px;">Shop: ${p.shop.name}</div>
+                <button style="margin-top:12px;" onclick="confirmInterest(${p.id}, this)">Mujhe Ye Chahiye</button>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    async function confirmInterest(productId, btn) {
+        try {
+            const res = await fetch(`${API_BASE}/purchase-intents`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ customerId: parseInt(userId), productId })
+            });
+
+            const contentType = res.headers.get("content-type");
+            const data = contentType && contentType.includes("application/json")
+                ? await res.json()
+                : await res.text();
+
+            if (res.ok) {
+                btn.innerText = 'Confirmed ✓';
+                btn.disabled = true;
+                document.getElementById('msg').innerHTML =
+                    `<div class="msg success">Confirm ho gaya! Ab shop pe jaake product le lo, wapas aake bill add karna mat bhoolna.</div>`;
+            } else {
+                document.getElementById('msg').innerHTML = `<div class="msg error">${data}</div>`;
+            }
+        } catch (err) {
+            document.getElementById('msg').innerHTML = `<div class="msg error">Backend se connect nahi ho paya.</div>`;
+        }
+    }
+
+    loadProducts();
+</script>
+</body>
+</html>

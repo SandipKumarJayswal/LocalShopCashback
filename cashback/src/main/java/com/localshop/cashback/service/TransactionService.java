@@ -1,14 +1,8 @@
 package com.localshop.cashback.service;
 
 import com.localshop.cashback.dto.TransactionRequest;
-import com.localshop.cashback.entity.Shop;
-import com.localshop.cashback.entity.Transaction;
-import com.localshop.cashback.entity.User;
-import com.localshop.cashback.entity.Wallet;
-import com.localshop.cashback.repository.ShopRepository;
-import com.localshop.cashback.repository.TransactionRepository;
-import com.localshop.cashback.repository.UserRepository;
-import com.localshop.cashback.repository.WalletRepository;
+import com.localshop.cashback.entity.*;
+import com.localshop.cashback.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +18,8 @@ public class TransactionService {
     @Autowired private ShopRepository shopRepository;
     @Autowired private WalletRepository walletRepository;
     @Autowired private CashbackService cashbackService;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private PurchaseIntentRepository purchaseIntentRepository;
 
     public Transaction addTransaction(TransactionRequest request) {
         User user = userRepository.findById(request.getUserId())
@@ -38,6 +34,23 @@ public class TransactionService {
         txn.setShop(shop);
         txn.setAmount(request.getAmount());
         txn.setCashbackEarned(cashback);
+
+        if (request.getProductId() != null) {
+            Product product = productRepository.findById(request.getProductId())
+                    .orElseThrow(() -> new RuntimeException("Product not found"));
+            txn.setProduct(product);
+
+            // agar customer ne pehle "interest confirm" kiya tha to use COMPLETED mark karo
+            purchaseIntentRepository.findByCustomerId(user.getId()).stream()
+                    .filter(pi -> pi.getProduct().getId().equals(product.getId())
+                            && pi.getStatus() == PurchaseIntent.Status.PENDING)
+                    .findFirst()
+                    .ifPresent(pi -> {
+                        pi.setStatus(PurchaseIntent.Status.COMPLETED);
+                        purchaseIntentRepository.save(pi);
+                    });
+        }
+
         Transaction savedTxn = transactionRepository.save(txn);
 
         Wallet wallet = walletRepository.findByUserId(user.getId())

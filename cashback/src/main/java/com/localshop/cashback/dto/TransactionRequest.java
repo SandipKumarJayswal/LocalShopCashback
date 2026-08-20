@@ -6,5 +6,6 @@ import lombok.Data;
 public class TransactionRequest {
     private Long userId;
     private Long shopId;
+    private Long productId;
     private Double amount;
 }

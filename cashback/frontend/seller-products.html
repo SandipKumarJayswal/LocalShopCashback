@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Products - LocalShop Cashback</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body style="padding:0;">
+
+<div class="topbar">
+    <div class="brand">LocalShop Cashback</div>
+    <nav>
+        <a href="register.html">Register</a>
+        <a href="login.html">Login</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="seller-products.html">My Products</a>
+        <a href="products.html">Browse Products</a>
+    </nav>
+</div>
+
+<div class="dashboard-wrap">
+    <h1 style="margin-bottom:24px;">Manage My Products</h1>
+
+    <div class="dashboard-grid">
+
+        <!-- LEFT: Add product form -->
+        <div class="panel">
+            <h1 style="font-size:16px; margin-bottom:0;">Add a New Product</h1>
+
+            <label>Your Shop ID</label>
+            <input type="number" id="shopId" placeholder="e.g. 1" required>
+
+            <label>Product Name</label>
+            <input type="text" id="pname" required>
+
+            <label>Description</label>
+            <input type="text" id="pdesc">
+
+            <label>Price (₹)</label>
+            <input type="number" id="pprice" required>
+
+            <label>Product Image</label>
+            <input type="file" id="pimage" accept="image/*">
+
+            <button id="addProductBtn">Add Product</button>
+            <div id="msg"></div>
+
+            <h1 style="font-size:16px; margin-top:28px;">My Product List</h1>
+            <div id="myProducts"></div>
+        </div>
+
+        <!-- RIGHT: Customers who confirmed interest -->
+        <div class="panel">
+            <h1 style="font-size:16px; margin-bottom:0;">Customers Interested</h1>
+            <p style="font-size:12px; color:#8b89b8; margin-top:6px;">
+                Ye customers ne bataya hai ki wo ye product lene aayenge.
+            </p>
+            <table>
+                <thead><tr><th>Customer</th><th>Product</th><th>Status</th></tr></thead>
+                <tbody id="intentsTable"></tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:8080/api";
+    const userId = localStorage.getItem('userId');
+    const userName = localStorage.getItem('userName');
+
+    if (!userId) {
+        alert('Please login first');
+        window.location.href = 'login.html';
+    }
+
+    // Product add karna
+    document.getElementById('addProductBtn').addEventListener('click', async () => {
+        const shopId = document.getElementById('shopId').value;
+        const name = document.getElementById('pname').value;
+        const description = document.getElementById('pdesc').value;
+        const price = document.getElementById('pprice').value;
+        const imageFile = document.getElementById('pimage').files[0];
+
+        if (!shopId || !name || !price) {
+            document.getElementById('msg').innerHTML = `<div class="msg error">Shop ID, Name aur Price zaroori hai.</div>`;
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('shopId', shopId);
+        formData.append('name', name);
+        formData.append('description', description);
+        formData.append('price', price);
+        if (imageFile) formData.append('image', imageFile);
+
+        try {
+            const res = await fetch(`${API_BASE}/products`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const contentType = res.headers.get("content-type");
+            const data = contentType && contentType.includes("application/json")
+                ? await res.json()
+                : await res.text();
+
+            if (res.ok) {
+                document.getElementById('msg').innerHTML = `<div class="msg success">Product add ho gaya!</div>`;
+                document.getElementById('pname').value = '';
+                document.getElementById('pdesc').value = '';
+                document.getElementById('pprice').value = '';
+                document.getElementById('pimage').value = '';
+                loadMyProducts();
+            } else {
+                document.getElementById('msg').innerHTML = `<div class="msg error">${data}</div>`;
+            }
+        } catch (err) {
+            document.getElementById('msg').innerHTML = `<div class="msg error">Backend se connect nahi ho paya.</div>`;
+        }
+    });
+
+    // Apne shop ke products dikhana
+    async function loadMyProducts() {
+        const shopId = document.getElementById('shopId').value;
+        if (!shopId) return;
+
+        const res = await fetch(`${API_BASE}/products/shop/${shopId}`);
+        const data = await res.json();
+        const container = document.getElementById('myProducts');
+        container.innerHTML = '';
+
+        data.forEach(p => {
+            container.innerHTML += `
+                <div style="display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.08);">
+                    ${p.imageUrl ? `<img src="http://localhost:8080${p.imageUrl}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;">` : ''}
+                    <div>
+                        <div style="font-weight:600; color:#fff;">${p.name}</div>
+                        <div style="font-size:12px; color:#a5a3d6;">₹${p.price}</div>
+                    </div>
+                </div>`;
+        });
+    }
+
+    // Interested customers dikhana
+    async function loadIntents() {
+        const shopId = document.getElementById('shopId').value;
+        if (!shopId) return;
+
+        const res = await fetch(`${API_BASE}/purchase-intents/shop/${shopId}`);
+        const data = await res.json();
+        const tbody = document.getElementById('intentsTable');
+        tbody.innerHTML = '';
+
+        data.forEach(i => {
+            tbody.innerHTML += `<tr><td>${i.customer.name}</td><td>${i.product.name}</td><td>${i.status}</td></tr>`;
+        });
+    }
+
+    document.getElementById('shopId').addEventListener('change', () => {
+        loadMyProducts();
+        loadIntents();
+    });
+</script>
+</body>
+</html>
